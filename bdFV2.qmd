@@ -4,23 +4,218 @@ format: html
 editor: visual
 ---
 
-## Quarto
-
-Quarto enables you to weave together content and executable code into a finished document. To learn more about Quarto see <https://quarto.org>.
-
-## Running Code
-
-When you click the **Render** button a document will be generated that includes both content and the output of embedded code. You can embed code like this:
-
-```{r}
-1 + 1
+```{r setup, include=FALSE}
+# Packages de base
+library(tidyverse)
+library(palmerpenguins)
+library(nycflights13)
+library(lubridate)
+library(forcats)
+library(stringr)
 ```
 
-You can add options to executable code like this
+::: {.callout-note}
+Cette fiche couvre l'intégralité des parties du livre **R for Data Science (2e)** :
+Whole Game → Visualize → Transform → Import → Program → Communicate.
+Chaque section reproduit les patterns clés avec des exemples commentés et prêts à l'emploi.
+:::
+
+---
+
+# PARTIE 1 — WHOLE GAME {.unnumbered}
+
+> Vue d'ensemble du cycle complet d'un projet de data science en R.
+
+---
+
+## Visualisation des données (`ggplot2`) {#sec-viz-intro}
+
+### Packages requis
 
 ```{r}
-#| echo: false
-2 * 2
+library(tidyverse)       # inclut ggplot2, dplyr, tidyr, readr, purrr, tibble...
+library(palmerpenguins)  # dataset penguins
+library(ggthemes)        # thèmes supplémentaires (colorblind safe)
 ```
 
-The `echo: false` option disables the printing of code (only output is displayed).
+### Explorer un data frame
+
+```{r}
+#| eval: false
+# Aperçu rapide
+glimpse(penguins)
+
+# Dimensions
+nrow(penguins)
+ncol(penguins)
+
+# Résumé statistique
+summary(penguins)
+```
+
+### Ajouter des aesthetics (couleur, forme, taille)
+
+```{r}
+#| fig-cap: "Aesthetics : couleur par espèce, forme par espèce"
+
+ggplot(penguins,
+       aes(x = flipper_length_mm, y = body_mass_g,
+           color = species, shape = species)) +
+  geom_point(size = 2, alpha = 0.8) +
+  geom_smooth(method = "lm", se = FALSE) +
+  scale_color_colorblind() +  # palette accessible daltoniens
+  labs(
+    title    = "Masse corporelle vs longueur des nageoires",
+    subtitle = "Données Palmer Station Antarctica",
+    x        = "Longueur nageoire (mm)",
+    y        = "Masse corporelle (g)",
+    color    = "Espèce",
+    shape    = "Espèce"
+  ) +
+  theme_minimal()
+```
+
+### Distributions : variables catégorielles
+
+```{r}
+#| fig-cap: "Diagramme en barres — variable catégorielle"
+
+# Compter les modalités
+ggplot(penguins, aes(x = species)) +
+  geom_bar()
+
+# Réordonner par fréquence
+ggplot(penguins, aes(x = fct_infreq(species))) +
+  geom_bar(fill = "steelblue") +
+  labs(x = "Espèce", y = "Effectif")
+```
+
+### Distributions : variables numériques
+
+```{r}
+#| fig-cap: "Histogramme et densité"
+
+# Histogramme
+ggplot(penguins, aes(x = body_mass_g)) +
+  geom_histogram(binwidth = 200, fill = "steelblue", color = "white")
+
+# Densité
+ggplot(penguins, aes(x = body_mass_g, fill = species)) +
+  geom_density(alpha = 0.5)
+```
+
+### Relations : numérique × catégorielle
+
+```{r}
+#| fig-cap: "Boxplot — numérique par catégorie"
+
+ggplot(penguins, aes(x = species, y = body_mass_g, fill = species)) +
+  geom_boxplot(alpha = 0.7) +
+  geom_jitter(width = 0.2, alpha = 0.3) +
+  guides(fill = "none") +
+  labs(x = "Espèce", y = "Masse corporelle (g)")
+```
+
+### Relations : deux catégorielles
+
+```{r}
+#| fig-cap: "Heatmap de comptage"
+
+ggplot(penguins, aes(x = island, y = species)) +
+  geom_count() +
+  labs(x = "Île", y = "Espèce", size = "Effectif")
+
+# Alternative : barres groupées
+ggplot(penguins, aes(x = island, fill = species)) +
+  geom_bar(position = "fill") +
+  labs(y = "Proportion", x = "Île", fill = "Espèce")
+```
+
+### Facettes (small multiples)
+
+```{r}
+#| fig-cap: "Facettes par espèce"
+
+ggplot(penguins, aes(x = flipper_length_mm, y = body_mass_g)) +
+  geom_point(aes(color = sex), alpha = 0.8) +
+  facet_wrap(~species) +      # une variable
+  # facet_grid(rows ~ cols)   # deux variables
+  theme_light()
+```
+
+### Sauvegarder un plot
+
+```{r}
+#| eval: false
+
+p <- ggplot(penguins, aes(x = flipper_length_mm, y = body_mass_g, color = species)) +
+  geom_point()
+
+ggsave(
+  filename = "mon_graphique.png",
+  plot     = p,
+  width    = 8,
+  height   = 5,
+  dpi      = 300
+)
+```
+
+```{r}
+# Graphique complet prêt pour publication
+ggplot(penguins,
+       aes(x = flipper_length_mm, y = body_mass_g,
+           color = species, shape = species)) +
+  geom_point(size = 2, alpha = 0.8) +
+  geom_smooth(method = "lm", se = FALSE, linewidth = 0.8) +
+  scale_color_colorblind() +
+  scale_x_continuous(breaks = seq(170, 235, 10)) +
+  scale_y_continuous(labels = scales::comma) +
+  labs(
+    title   = "Masse corporelle et longueur des nageoires",
+    subtitle = "Manchots Adelie, Chinstrap et Gentoo — Palmer Station, Antarctica",
+    caption = "Source : Gorman, Williams & Fraser (2014)",
+    x       = "Longueur de la nageoire (mm)",
+    y       = "Masse corporelle (g)",
+    color   = "Espèce",
+    shape   = "Espèce"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    plot.title      = element_text(face = "bold"),
+    legend.position = "bottom"
+  )
+```
+
+## Workflow : bases de R {#sec-workflow-basics}
+
+```{r}
+# Calculs de base
+1 + 2
+sqrt(144)
+log(10)          # log naturel
+log10(1000)      # log base 10
+exp(1)
+
+# Assignation
+x <- 42          # recommandé
+y = "bonjour"    # fonctionne aussi
+
+# Appeler une fonction
+seq(from = 1, to = 10, by = 2)
+
+# Vecteurs
+v <- c(1, 5, 3, 8, 2)
+mean(v)
+median(v)
+sd(v)
+sum(v)
+length(v)
+
+# Nommer un vecteur
+prix <- c(pomme = 1.2, banane = 0.5, cerise = 3.0)
+prix["banane"]
+
+# Vecteur logique
+v > 3
+v[v > 3]  # sous-sélection
+```
