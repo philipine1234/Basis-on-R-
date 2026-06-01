@@ -14,12 +14,9 @@ library(forcats)
 library(stringr)
 ```
 
-::: {.callout-note}
-Cette fiche couvre l'intégralité des parties du livre **R for Data Science (2e)** :
-Whole Game → Visualize → Transform → Import → Program → Communicate.
-Chaque section reproduit les patterns clés avec des exemples commentés et prêts à l'emploi.
-:::
 
+[Intro à R](https://r4ds.hadley.nz/)
+[R cookbook](https://rc2e.com/)
 ---
 
 # PARTIE 1 — WHOLE GAME {.unnumbered}
